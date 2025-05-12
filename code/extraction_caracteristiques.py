@@ -5,6 +5,8 @@ from scipy import stats
 from extraction_lignes import extraction_lignes_simples
 from pretraitement import pretraitement_image
 from detection_contours import detection_contours
+# Importer le module de post-traitement
+from post_traitement import post_traitement
 
 def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensions_image, visualiser=False):
     """
@@ -368,6 +370,7 @@ def detection_escaliers_complete(image_path, visualiser=False):
     3. Extraction des lignes droites
     4. Extraction des caractéristiques
     5. Classification
+    6. Post-traitement pour réduire les faux positifs
     
     Args:
         image_path (str): Chemin vers l'image à analyser
@@ -407,15 +410,18 @@ def detection_escaliers_complete(image_path, visualiser=False):
         print("5. Classification...")
         resultats = classification_escaliers(image_originale, caracteristiques, visualiser=visualiser)
         
+        print("6. Post-traitement...")
+        resultats_post_traites = post_traitement(resultats, image_originale, caracteristiques, visualiser=visualiser)
+        
         # Sauvegarder les résultats
-        cv2.imwrite("resultats_classification.jpg", resultats["image_classification"])
-        cv2.imwrite("masque_escalier.jpg", resultats["masque_escalier"])
+        cv2.imwrite("resultats_classification_finale.jpg", resultats_post_traites["image_classification"])
+        cv2.imwrite("masque_escalier_final.jpg", resultats_post_traites["masque_escalier"])
         
-        print(f"\nRésultat: {'ESCALIER DÉTECTÉ' if resultats['est_escalier'] else 'PAS D\'ESCALIER'}")
-        print(f"Score: {resultats['score']}%")
-        print(f"Confiance: {resultats['confiance']}")
+        print(f"\nRésultat final: {'ESCALIER DÉTECTÉ' if resultats_post_traites['est_escalier'] else 'PAS D\'ESCALIER'}")
+        print(f"Score: {resultats_post_traites['score']:.1f}%")
+        print(f"Confiance: {resultats_post_traites['confiance']}")
         
-        return resultats
+        return resultats_post_traites
     else:
         print("Aucune ligne détectée, impossible de poursuivre l'analyse.")
         return None
