@@ -364,13 +364,13 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
 
 def detection_escaliers_complete(image_path, visualiser=False):
     """
-    Pipeline complet pour la détection d'escaliers:
+    Pipeline complet pour la détection du type d'escalier:
     1. Prétraitement de l'image
     2. Détection des contours
     3. Extraction des lignes droites
     4. Extraction des caractéristiques
-    5. Classification
-    6. Post-traitement pour réduire les faux positifs
+    5. Classification (suppose toujours que l'escalier existe)
+    6. Post-traitement pour déterminer le type d'escalier (droit ou tournant)
     
     Args:
         image_path (str): Chemin vers l'image à analyser
@@ -407,28 +407,37 @@ def detection_escaliers_complete(image_path, visualiser=False):
         caracteristiques["lignes_horizontales"] = resultats_lignes["lignes_horizontales"]
         caracteristiques["lignes_verticales"] = resultats_lignes["lignes_verticales"]
         
-        print("5. Classification...")
+        print("5. Classification (escalier supposé présent)...")
         resultats = classification_escaliers(image_originale, caracteristiques, visualiser=visualiser)
         
-        print("6. Post-traitement...")
+        # Forcer la présence d'escalier
+        resultats["est_escalier"] = True
+        
+        print("6. Classification du type d'escalier (droit ou tournant)...")
         resultats_post_traites = post_traitement(resultats, image_originale, caracteristiques, visualiser=visualiser)
         
         # Sauvegarder les résultats
         cv2.imwrite("resultats_classification_finale.jpg", resultats_post_traites["image_classification"])
         cv2.imwrite("masque_escalier_final.jpg", resultats_post_traites["masque_escalier"])
         
-        print(f"\nRésultat final: {'ESCALIER DÉTECTÉ' if resultats_post_traites['est_escalier'] else 'PAS D\'ESCALIER'}")
-        print(f"Score: {resultats_post_traites['score']:.1f}%")
-        print(f"Confiance: {resultats_post_traites['confiance']}")
+        print(f"\nType d'escalier: {resultats_post_traites['type_escalier'].upper()}")
+        print(f"Confiance du type: {resultats_post_traites['score_type']:.1f}%")
         
         return resultats_post_traites
     else:
         print("Aucune ligne détectée, impossible de poursuivre l'analyse.")
-        return None
+        # Même avec aucune ligne, on considère qu'il y a un escalier (tournant par défaut)
+        return {
+            "est_escalier": True,
+            "type_escalier": "tournant",
+            "score_type": 50,
+            "masque_escalier": np.zeros((image_originale.shape[0], image_originale.shape[1]), dtype=np.uint8),
+            "image_classification": image_originale.copy()
+        }
 
 if __name__ == "__main__":
     # Chemin vers une image d'escalier
-    image_path = "images/14.jpg"
+    image_path = "images/58.jpg"
     
     try:
         # Exécuter le pipeline complet
