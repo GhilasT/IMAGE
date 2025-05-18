@@ -1,4 +1,4 @@
-import cv2
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -6,7 +6,7 @@ import glob
 from extraction_caracteristiques import detection_escaliers_complete
 from post_traitement import classifier_type_escalier
 
-def tester_classification_type(dossier_images="images/", visualiser=True):
+def tester_classification_type(dossier_images="Labelised/", visualiser=True):
     """
     Teste la classification du type d'escalier (droit ou tournant) sur plusieurs images.
     
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         #resultats = tester_classification_type(dossier_images="images/", visualiser=True)
         
         # Pour tester sur une seule image, décommentez ces lignes:
-        image_path = "images/4.jpg"  # Remplacez par votre image d'escalier tournant
+        image_path = "Labelised/4.jpg"  # Remplacez par votre image d'escalier tournant
         resultat = detection_escaliers_complete(image_path, visualiser=True)
         
     except Exception as e:

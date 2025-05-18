@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from extraction_texture_materiau import predire_materiau
 import matplotlib.pyplot as plt
 from scipy import stats
 from extraction_lignes import extraction_lignes_simples
@@ -415,7 +416,10 @@ def detection_escaliers_complete(image_path, visualiser=False):
         
         print("6. Classification du type d'escalier (droit ou tournant)...")
         resultats_post_traites = post_traitement(resultats, image_originale, caracteristiques, visualiser=visualiser)
-        
+        #Détection de matériau
+        roi = cv2.bitwise_and(image_originale, image_originale, mask=resultats_post_traites["masque_escalier"])
+        materiau, proba = predire_materiau(roi)
+        resultats_post_traites.update({"materiau": materiau, "proba_materiau": proba})
         # Sauvegarder les résultats
         cv2.imwrite("resultats_classification_finale.jpg", resultats_post_traites["image_classification"])
         cv2.imwrite("masque_escalier_final.jpg", resultats_post_traites["masque_escalier"])
@@ -434,6 +438,7 @@ def detection_escaliers_complete(image_path, visualiser=False):
             "masque_escalier": np.zeros((image_originale.shape[0], image_originale.shape[1]), dtype=np.uint8),
             "image_classification": image_originale.copy()
         }
+    
 
 if __name__ == "__main__":
     # Chemin vers une image d'escalier
