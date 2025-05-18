@@ -5,8 +5,6 @@ from scipy import stats
 from extraction_lignes import extraction_lignes_simples
 from pretraitement import pretraitement_image
 from detection_contours import detection_contours
-# Importer le module de post-traitement
-from post_traitement import post_traitement
 
 def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensions_image, visualiser=False):
     """
@@ -190,20 +188,20 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
 
 def classification_escaliers(image, caracteristiques, visualiser=False):
     """
-    Classifie les zones d'image comme escaliers ou non en utilisant les caractéristiques extraites
-    et des règles heuristiques
+    Prépare simplement les données pour la classification du type d'escalier (droit ou tournant)
+    en supposant toujours que l'image contient un escalier.
     
     Args:
         image: Image originale
         caracteristiques: Dictionnaire des caractéristiques extraites
-        visualiser: Si True, affiche les résultats de la classification
+        visualiser: Si True, affiche les résultats de la préparation
         
     Returns:
-        dict: Résultats de la classification avec scores et image segmentée
+        dict: Données préparées pour la classification du type d'escalier
     """
     hauteur, largeur = image.shape[:2]
     
-    # Créer une image pour la visualisation de la classification
+    # Créer une image pour la visualisation
     image_classification = image.copy() if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     
     # Application d'un seuillage Otsu pour segmenter l'image
@@ -215,104 +213,46 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
     # Appliquer le seuillage d'Otsu
     _, image_seuil = cv2.threshold(image_gris, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
-    # Créer un masque pour les zones d'escaliers potentiels
+    # Créer un masque pour les zones d'escaliers
     masque_escalier = np.zeros((hauteur, largeur), dtype=np.uint8)
     
-    # 1. Règles heuristiques basées sur les caractéristiques extraites
-    score_escalier = 0
-    est_escalier = False
-    raisons = []
-    
-    # Règle 1: Nombre minimum de lignes horizontales
-    if caracteristiques["nb_horizontales"] >= 3:
-        score_escalier += 30
-        raisons.append(f"Nombre suffisant de lignes horizontales ({caracteristiques['nb_horizontales']})")
-    else:
-        raisons.append(f"Nombre insuffisant de lignes horizontales ({caracteristiques['nb_horizontales']} < 3)")
-    
-    # Règle 2: Rapport entre lignes horizontales et verticales
-    ratio_ideal = 1.5  # Un escalier a généralement plus de lignes horizontales que verticales
-    if 0.8 <= caracteristiques["ratio_h_v"] <= 3.0:
-        score_escalier += 15
-        raisons.append(f"Bon rapport H/V ({caracteristiques['ratio_h_v']:.2f})")
-    else:
-        raisons.append(f"Rapport H/V non idéal ({caracteristiques['ratio_h_v']:.2f})")
-    
-    # Règle 3: Périodicité des espacements entre lignes horizontales
-    if caracteristiques["periodicite"] > 0.7:
-        score_escalier += 25
-        raisons.append(f"Bonne périodicité des espacements ({caracteristiques['periodicite']:.2f})")
-    elif caracteristiques["periodicite"] > 0.5:
-        score_escalier += 15
-        raisons.append(f"Périodicité moyenne des espacements ({caracteristiques['periodicite']:.2f})")
-    else:
-        raisons.append(f"Faible périodicité des espacements ({caracteristiques['periodicite']:.2f})")
-    
-    # Règle 4: Couverture verticale de l'image
-    if caracteristiques["couverture_verticale"] > 0.4:
-        score_escalier += 15
-        raisons.append(f"Bonne couverture verticale ({caracteristiques['couverture_verticale']*100:.1f}%)")
-    else:
-        raisons.append(f"Faible couverture verticale ({caracteristiques['couverture_verticale']*100:.1f}%)")
-    
-    # Règle 5: Uniformité des longueurs de lignes horizontales
-    if caracteristiques["longueur_h_ecart_type"] > 0 and caracteristiques["longueur_h_moyenne"] > 0:
-        coeff_variation = caracteristiques["longueur_h_ecart_type"] / caracteristiques["longueur_h_moyenne"]
-        if coeff_variation < 0.3:
-            score_escalier += 15
-            raisons.append(f"Bonne uniformité des longueurs de marches (CV={coeff_variation:.2f})")
-        elif coeff_variation < 0.5:
-            score_escalier += 10
-            raisons.append(f"Uniformité moyenne des longueurs de marches (CV={coeff_variation:.2f})")
-        else:
-            raisons.append(f"Faible uniformité des longueurs de marches (CV={coeff_variation:.2f})")
-    
-    # Décision finale
-    if score_escalier >= 70:
-        est_escalier = True
-        confiance = "Élevée"
-    elif score_escalier >= 50:
-        est_escalier = True
-        confiance = "Moyenne"
-    elif score_escalier >= 30:
-        est_escalier = False
-        confiance = "Faible"
-    else:
-        est_escalier = False
-        confiance = "Très faible"
-    
-    # 2. Si c'est un escalier, essayer de délimiter la zone d'escalier
-    if est_escalier:
-        # Créer un masque basé sur les lignes horizontales et verticales
-        y_coords = []
-        for ligne in caracteristiques.get("lignes_horizontales", []):
+    # Créer le masque basé sur les lignes détectées
+    y_coords = []
+    for ligne in caracteristiques.get("lignes_horizontales", []):
+        if ligne is not None:
             x1, y1, x2, y2 = ligne[0]
             y_moyen = int((y1 + y2) / 2)
             y_coords.append(y_moyen)
+    
+    if y_coords:
+        # Estimer l'espacement moyen s'il n'est pas disponible
+        espacement_moyen = caracteristiques.get("espacement_moyen", 20)
         
-        if y_coords:
-            y_min = max(0, int(min(y_coords) - caracteristiques["espacement_moyen"]))
-            y_max = min(hauteur, int(max(y_coords) + caracteristiques["espacement_moyen"]))
-            
-            # Trouver les limites horizontales
-            x_coords = []
-            for ligne in caracteristiques.get("lignes_horizontales", []):
+        y_min = max(0, int(min(y_coords) - espacement_moyen))
+        y_max = min(hauteur, int(max(y_coords) + espacement_moyen))
+        
+        # Trouver les limites horizontales
+        x_coords = []
+        for ligne in caracteristiques.get("lignes_horizontales", []):
+            if ligne is not None:
                 x1, y1, x2, y2 = ligne[0]
                 x_coords.extend([x1, x2])
+        
+        if x_coords:
+            x_min = max(0, int(min(x_coords) - 20))
+            x_max = min(largeur, int(max(x_coords) + 20))
             
-            if x_coords:
-                x_min = max(0, int(min(x_coords) - 20))
-                x_max = min(largeur, int(max(x_coords) + 20))
-                
-                # Créer le masque et le visualiser
-                masque_escalier[y_min:y_max, x_min:x_max] = 255
-                
-                # Dessiner la zone d'escalier sur l'image de classification
-                cv2.rectangle(image_classification, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                cv2.putText(image_classification, f"ESCALIER ({score_escalier}%)", (x_min, y_min-10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            # Créer le masque
+            masque_escalier[y_min:y_max, x_min:x_max] = 255
             
-    # Visualisation des résultats
+            # Dessiner la zone d'escalier sur l'image de classification
+            cv2.rectangle(image_classification, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            cv2.putText(image_classification, "ESCALIER", (x_min, y_min-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    else:
+        # S'il n'y a pas de lignes, utiliser toute l'image
+        masque_escalier = np.ones((hauteur, largeur), dtype=np.uint8) * 255
+    
     if visualiser:
         plt.figure(figsize=(15, 10))
         
@@ -335,27 +275,15 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
         plt.axis('off')
         
         plt.subplot(2, 2, 4)
-        plt.title(f"Classification: {'ESCALIER' if est_escalier else 'PAS D\'ESCALIER'}\nScore: {score_escalier}% - Confiance: {confiance}")
+        plt.title("Zone d'escalier détectée")
         plt.imshow(cv2.cvtColor(image_classification, cv2.COLOR_BGR2RGB))
         plt.axis('off')
         
         plt.tight_layout()
         plt.show()
-        
-        # Afficher les raisons de la classification
-        print("\n=== Résultats de la classification ===")
-        print(f"Score total: {score_escalier}%")
-        print(f"Décision: {'ESCALIER' if est_escalier else 'PAS D\'ESCALIER'}")
-        print(f"Niveau de confiance: {confiance}")
-        print("\nRaisons:")
-        for i, raison in enumerate(raisons, 1):
-            print(f"  {i}. {raison}")
     
     resultats = {
-        "est_escalier": est_escalier,
-        "score": score_escalier,
-        "confiance": confiance,
-        "raisons": raisons,
+        "est_escalier": True,  # Toujours considérer qu'il y a un escalier
         "masque_escalier": masque_escalier,
         "image_classification": image_classification
     }
@@ -369,15 +297,14 @@ def detection_escaliers_complete(image_path, visualiser=False):
     2. Détection des contours
     3. Extraction des lignes droites
     4. Extraction des caractéristiques
-    5. Classification (suppose toujours que l'escalier existe)
-    6. Post-traitement pour déterminer le type d'escalier (droit ou tournant)
+    5. Préparation des données (suppose toujours que l'escalier existe)
     
     Args:
         image_path (str): Chemin vers l'image à analyser
         visualiser (bool): Si True, affiche les résultats de chaque étape
     
     Returns:
-        dict: Résultats de la classification
+        dict: Résultats de la classification du type d'escalier
     """
     # Charger l'image originale
     image_originale = cv2.imread(image_path)
@@ -393,51 +320,143 @@ def detection_escaliers_complete(image_path, visualiser=False):
     print("3. Extraction des lignes droites...")
     resultats_lignes = extraction_lignes_simples(contours, visualiser=visualiser)
     
-    if resultats_lignes:
-        print("4. Extraction des caractéristiques...")
-        dimensions_image = image_originale.shape
-        caracteristiques = extraction_caracteristiques(
-            resultats_lignes["lignes_horizontales"],
-            resultats_lignes["lignes_verticales"],
-            dimensions_image,
-            visualiser=visualiser
-        )
-        
-        # Ajouter les listes de lignes aux caractéristiques pour la classification
-        caracteristiques["lignes_horizontales"] = resultats_lignes["lignes_horizontales"]
-        caracteristiques["lignes_verticales"] = resultats_lignes["lignes_verticales"]
-        
-        print("5. Classification (escalier supposé présent)...")
-        resultats = classification_escaliers(image_originale, caracteristiques, visualiser=visualiser)
-        
-        # Forcer la présence d'escalier
-        resultats["est_escalier"] = True
-        
-        print("6. Classification du type d'escalier (droit ou tournant)...")
-        resultats_post_traites = post_traitement(resultats, image_originale, caracteristiques, visualiser=visualiser)
-        
-        # Sauvegarder les résultats
-        cv2.imwrite("resultats_classification_finale.jpg", resultats_post_traites["image_classification"])
-        cv2.imwrite("masque_escalier_final.jpg", resultats_post_traites["masque_escalier"])
-        
-        print(f"\nType d'escalier: {resultats_post_traites['type_escalier'].upper()}")
-        print(f"Confiance du type: {resultats_post_traites['score_type']:.1f}%")
-        
-        return resultats_post_traites
-    else:
-        print("Aucune ligne détectée, impossible de poursuivre l'analyse.")
-        # Même avec aucune ligne, on considère qu'il y a un escalier (tournant par défaut)
-        return {
+    if resultats_lignes is None:
+        print("Aucune ligne détectée. On suppose un escalier tournant par défaut.")
+        # Créer un résultat par défaut avec escalier tournant
+        resultats = {
             "est_escalier": True,
             "type_escalier": "tournant",
-            "score_type": 50,
             "masque_escalier": np.zeros((image_originale.shape[0], image_originale.shape[1]), dtype=np.uint8),
             "image_classification": image_originale.copy()
         }
+        return resultats
+    
+    print("4. Extraction des caractéristiques...")
+    dimensions_image = image_originale.shape
+    caracteristiques = extraction_caracteristiques(
+        resultats_lignes["lignes_horizontales"],
+        resultats_lignes["lignes_verticales"],
+        dimensions_image,
+        visualiser=visualiser
+    )
+    
+    # Ajouter les listes de lignes aux caractéristiques pour la classification
+    caracteristiques["lignes_horizontales"] = resultats_lignes["lignes_horizontales"]
+    caracteristiques["lignes_verticales"] = resultats_lignes["lignes_verticales"]
+    
+    print("5. Préparation pour la classification du type...")
+    resultats = classification_escaliers(image_originale, caracteristiques, visualiser=visualiser)
+    
+    # Déterminer directement le type d'escalier ici au lieu d'utiliser le post-traitement
+    if "lignes_horizontales" in caracteristiques and len(caracteristiques["lignes_horizontales"]) >= 3:
+        # NOUVELLE APPROCHE: Ne considérer que les lignes principales (les plus longues)
+        lignes_h = caracteristiques["lignes_horizontales"]
+        
+        # 1. Calculer la longueur de chaque ligne
+        lignes_avec_longueur = []
+        for ligne in lignes_h:
+            x1, y1, x2, y2 = ligne[0]
+            longueur = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+            lignes_avec_longueur.append((ligne, longueur))
+        
+        # 2. Trier les lignes par longueur décroissante
+        lignes_avec_longueur.sort(key=lambda x: x[1], reverse=True)
+        
+        # 3. Ne garder que les N lignes les plus longues (représentant mieux la structure)
+        n_lignes_principales = min(len(lignes_avec_longueur), 10)  # Considérer max 10 lignes principales
+        lignes_principales = lignes_avec_longueur[:n_lignes_principales]
+        
+        # 4. Créer une image de visualisation des lignes principales si demandé
+        if visualiser:
+            img_lignes_principales = image_originale.copy()
+            for ligne, _ in lignes_principales:
+                x1, y1, x2, y2 = ligne[0]
+                cv2.line(img_lignes_principales, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            
+            plt.figure(figsize=(10, 8))
+            plt.title(f"Les {n_lignes_principales} lignes principales de l'escalier")
+            plt.imshow(cv2.cvtColor(img_lignes_principales, cv2.COLOR_BGR2RGB))
+            plt.axis('off')
+            plt.show()
+        
+        # 5. Analyser la géométrie des lignes principales
+        angles = []
+        longueurs = []
+        centres_x = []
+        
+        for ligne, longueur in lignes_principales:
+            x1, y1, x2, y2 = ligne[0]
+            angle = np.arctan2(y2-y1, x2-x1) * 180 / np.pi
+            centre_x = (x1 + x2) / 2
+            
+            angles.append(angle)
+            longueurs.append(longueur)
+            centres_x.append(centre_x)
+        
+        # 6. Calculer les métriques de classification
+        ecart_type_angles = np.std(angles)  # Parallélisme des lignes
+        ecart_type_centres = np.std(centres_x)  # Alignement vertical
+        longueur_moyenne = np.mean(longueurs)
+        variation_centres = ecart_type_centres / longueur_moyenne if longueur_moyenne > 0 else float('inf')
+        
+        # 7. Afficher les métriques si visualisation activée
+        print(f"Métriques des lignes principales:")
+        print(f"- Nombre de lignes principales: {n_lignes_principales}")
+        print(f"- Écart-type des angles: {ecart_type_angles:.2f}°")
+        print(f"- Variation des centres X: {variation_centres:.2f}")
+        print(f"- Angles des lignes principales: {[round(a, 1) for a in angles]}")
+        
+        # 8. Classifier selon les métriques des lignes principales
+        if ecart_type_angles < 10.0 and variation_centres < 0.3:
+            resultats["type_escalier"] = "droit"
+            print("Critères d'escalier droit satisfaits!")
+        else:
+            resultats["type_escalier"] = "tournant"
+            print("Critères d'escalier tournant satisfaits!")
+            
+        # 9. Sauvegarder les métriques dans les résultats pour analyse
+        resultats["metriques"] = {
+            "ecart_type_angles": ecart_type_angles,
+            "variation_centres": variation_centres,
+            "angles": angles,
+            "longueurs": longueurs
+        }
+    else:
+        resultats["type_escalier"] = "tournant"  # Par défaut
+    
+    # Dessiner le type d'escalier sur l'image de classification
+    image_resultat = resultats["image_classification"].copy()
+    masque = resultats["masque_escalier"]
+    
+    contours_masque, _ = cv2.findContours(masque, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(image_resultat, contours_masque, -1, (0, 255, 0), 2)
+    
+    if contours_masque:
+        c = max(contours_masque, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(c)
+        cv2.putText(
+            image_resultat, 
+            f"ESCALIER {resultats['type_escalier'].upper()}", 
+            (x, y-10), 
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            0.9, 
+            (0, 255, 0), 
+            2
+        )
+    
+    resultats["image_classification"] = image_resultat
+    
+    # Sauvegarde des résultats
+    cv2.imwrite("resultats_classification_finale.jpg", resultats["image_classification"])
+    cv2.imwrite("masque_escalier_final.jpg", resultats["masque_escalier"])
+    
+    print(f"\nType d'escalier: {resultats['type_escalier'].upper()}")
+    
+    return resultats
 
 if __name__ == "__main__":
     # Chemin vers une image d'escalier
-    image_path = "images/58.jpg"
+    image_path = "images/14.jpg"
     
     try:
         # Exécuter le pipeline complet

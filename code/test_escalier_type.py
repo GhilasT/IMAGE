@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import os
 import glob
 from extraction_caracteristiques import detection_escaliers_complete
-from post_traitement import classifier_type_escalier
 
 def tester_classification_type(dossier_images="images/", visualiser=True):
     """
@@ -34,20 +33,20 @@ def tester_classification_type(dossier_images="images/", visualiser=True):
             
             if resultat and resultat["est_escalier"]:
                 type_escalier = resultat.get("type_escalier", "indéterminé")
-                score_type = resultat.get("score_type", 0)
                 
                 resultats.append({
                     "image": os.path.basename(image_path),
-                    "type": type_escalier,
-                    "score": score_type
+                    "type": type_escalier
                 })
                 
-                print(f"Résultat: Escalier {type_escalier.upper()} (confiance: {score_type:.1f}%)")
+                print(f"Résultat: Escalier {type_escalier.upper()}")
             else:
                 print("Aucun escalier détecté dans cette image.")
         
         except Exception as e:
             print(f"Erreur lors du traitement de {image_path}: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Afficher un récapitulatif
     if resultats:
@@ -68,11 +67,11 @@ def tester_classification_type(dossier_images="images/", visualiser=True):
 if __name__ == "__main__":
     try:
         # Tester sur toutes les images du dossier
-        #resultats = tester_classification_type(dossier_images="images/", visualiser=True)
+        resultats = tester_classification_type(dossier_images="images/", visualiser=True)
         
         # Pour tester sur une seule image, décommentez ces lignes:
-        image_path = "images/4.jpg"  # Remplacez par votre image d'escalier tournant
-        resultat = detection_escaliers_complete(image_path, visualiser=True)
+        #image_path = "images/4.jpg"  # Remplacez par votre image d'escalier
+        #resultat = detection_escaliers_complete(image_path, visualiser=True)
         
     except Exception as e:
         print(f"Erreur lors du test: {e}")
