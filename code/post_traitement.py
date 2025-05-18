@@ -425,7 +425,7 @@ if __name__ == "__main__":
     try:
         from extraction_caracteristiques import detection_escaliers_complete
         
-        image_path = "images/4.jpg"
+        image_path = "images/.jpg"
         
         print("Détection d'escaliers...")
         resultats = detection_escaliers_complete(image_path, visualiser=False)
