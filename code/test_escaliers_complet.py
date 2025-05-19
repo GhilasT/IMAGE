@@ -34,21 +34,16 @@ def tester_images_escaliers(dossier_images="images/", nombre_max=None, save_resu
     # Créer un tableau pour stocker les résultats
     resultats = []
     
-    # Traiter chaque image
-    for i, image_path in enumerate(fichiers_images):
+    for i, image_path in enumerate(fichiers_images): #Pour chaque images
         try:
             print(f"\n[{i+1}/{len(fichiers_images)}] Traitement de {os.path.basename(image_path)}")
             
-            # Exécuter la détection
             res = detection_escaliers_complete(image_path, visualiser=False)
             
-            if res and "type_escalier" in res:
-                # Extraire les métriques importantes
+            if res and "type_escalier" in res: # On récupere les métriques importantes
                 metriques = res.get("metriques", {})
                 ecart_type_angles = metriques.get("ecart_type_angles", float('nan'))
                 variation_centres = metriques.get("variation_centres", float('nan'))
-                
-                # Stocker le résultat
                 resultats.append({
                     "image": os.path.basename(image_path),
                     "type_escalier": res["type_escalier"],
@@ -66,11 +61,9 @@ def tester_images_escaliers(dossier_images="images/", nombre_max=None, save_resu
             import traceback
             traceback.print_exc()
     
-    # Créer un DataFrame pandas avec les résultats
     if resultats:
         df_resultats = pd.DataFrame(resultats)
         
-        # Afficher les statistiques
         print("\n=== Statistiques des résultats ===")
         print(f"Total d'escaliers: {len(df_resultats)}")
         count_droits = sum(df_resultats["type_escalier"] == "droit")
@@ -93,7 +86,6 @@ def tester_images_escaliers(dossier_images="images/", nombre_max=None, save_resu
             print(f"- Écart-type angles: {tournants['ecart_type_angles'].mean():.2f}°")
             print(f"- Variation centres: {tournants['variation_centres'].mean():.2f}")
         
-        # Sauvegarder les résultats
         if save_results:
             csv_path = os.path.join(dossier_images, "resultats_detection.csv")
             df_resultats.to_csv(csv_path, index=False)
@@ -105,7 +97,6 @@ def tester_images_escaliers(dossier_images="images/", nombre_max=None, save_resu
         return None
 
 if __name__ == "__main__":
-    # Tester l'algorithme sur une seule image
     image_path = "images/15.jpg" 
     print(f"Test sur l'image {image_path}...")
     resultat = detection_escaliers_complete(image_path, visualiser=True)

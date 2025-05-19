@@ -22,7 +22,7 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
     hauteur, largeur = dimensions_image[:2]
     caracteristiques = {}
     
-    # 1. Calculer le rapport entre lignes horizontales et verticales
+    # On calcule le rapport entre les  lignes horizontales et verticales
     nb_horizontales = len(lignes_horizontales)
     nb_verticales = len(lignes_verticales)
     
@@ -35,7 +35,6 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
     caracteristiques["nb_horizontales"] = nb_horizontales
     caracteristiques["nb_verticales"] = nb_verticales
     
-    # 2. Mesurer l'espacement entre les lignes (périodicité)
     # Extraire les coordonnées y des lignes horizontales
     y_coords = []
     for ligne in lignes_horizontales:
@@ -57,10 +56,9 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         caracteristiques["espacement_moyen"] = np.mean(espacements)
         caracteristiques["espacement_ecart_type"] = np.std(espacements)
         
-        # Calculer la périodicité (régularité de l'espacement)
         if len(espacements) >= 2:
             variation_espacement = caracteristiques["espacement_ecart_type"] / caracteristiques["espacement_moyen"]
-            caracteristiques["periodicite"] = 1 - min(1, variation_espacement)  # Plus proche de 1 = plus périodique
+            caracteristiques["periodicite"] = 1 - min(1, variation_espacement)
         else:
             caracteristiques["periodicite"] = 0
     else:
@@ -70,7 +68,7 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         caracteristiques["espacement_ecart_type"] = 0
         caracteristiques["periodicite"] = 0
     
-    # 3. Analyser la distribution des longueurs de lignes
+    # On analyse comment est distribué les longueurs des lignes
     longueurs_h = []
     for ligne in lignes_horizontales:
         x1, y1, x2, y2 = ligne[0]
@@ -83,7 +81,7 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         longueur = np.sqrt((x2-x1)**2 + (y2-y1)**2)
         longueurs_v.append(longueur)
     
-    # Caractéristiques de longueur des lignes horizontales
+    # Caractéristiques des lignes horizontales
     if longueurs_h:
         caracteristiques["longueur_h_min"] = min(longueurs_h)
         caracteristiques["longueur_h_max"] = max(longueurs_h)
@@ -97,7 +95,7 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         caracteristiques["longueur_h_ecart_type"] = 0
         caracteristiques["longueur_h_mediane"] = 0
     
-    # Caractéristiques de longueur des lignes verticales
+    # Caractéristiques des lignes verticales
     if longueurs_v:
         caracteristiques["longueur_v_min"] = min(longueurs_v)
         caracteristiques["longueur_v_max"] = max(longueurs_v)
@@ -111,7 +109,6 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         caracteristiques["longueur_v_ecart_type"] = 0
         caracteristiques["longueur_v_mediane"] = 0
     
-    # 4. Analyse de la distribution spatiale des lignes
     if y_coords:
         caracteristiques["y_min"] = min(y_coords)
         caracteristiques["y_max"] = max(y_coords)
@@ -124,8 +121,7 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
     # Visualisation des caractéristiques
     if visualiser and y_coords:
         plt.figure(figsize=(15, 10))
-        
-        # Histogramme des espacements
+    
         plt.subplot(2, 2, 1)
         plt.title("Distribution des espacements entre lignes horizontales")
         plt.hist(espacements, bins=10, color='blue', alpha=0.7)
@@ -173,8 +169,6 @@ def extraction_caracteristiques(lignes_horizontales, lignes_verticales, dimensio
         
         plt.tight_layout()
         plt.show()
-        
-        # Tableau récapitulatif des caractéristiques
         print("\n=== Caractéristiques extraites ===")
         print(f"Rapport lignes H/V: {ratio_h_v:.2f}")
         print(f"Nombre de lignes horizontales: {nb_horizontales}")
@@ -204,19 +198,16 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
     # Créer une image pour la visualisation
     image_classification = image.copy() if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     
-    # Application d'un seuillage Otsu pour segmenter l'image
+    # On utilise Otsu pour segmenter l'image
     if len(image.shape) == 3:
         image_gris = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
         image_gris = image.copy()
     
-    # Appliquer le seuillage d'Otsu
     _, image_seuil = cv2.threshold(image_gris, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
-    # Créer un masque pour les zones d'escaliers
     masque_escalier = np.zeros((hauteur, largeur), dtype=np.uint8)
     
-    # Créer le masque basé sur les lignes détectées
     y_coords = []
     for ligne in caracteristiques.get("lignes_horizontales", []):
         if ligne is not None:
@@ -242,7 +233,6 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
             x_min = max(0, int(min(x_coords) - 20))
             x_max = min(largeur, int(max(x_coords) + 20))
             
-            # Créer le masque
             masque_escalier[y_min:y_max, x_min:x_max] = 255
             
             # Dessiner la zone d'escalier sur l'image de classification
@@ -250,7 +240,7 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
             cv2.putText(image_classification, "ESCALIER", (x_min, y_min-10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     else:
-        # S'il n'y a pas de lignes, utiliser toute l'image
+        # S'il n'y a pas de lignes, on utilise toute l'image
         masque_escalier = np.ones((hauteur, largeur), dtype=np.uint8) * 255
     
     if visualiser:
@@ -283,7 +273,7 @@ def classification_escaliers(image, caracteristiques, visualiser=False):
         plt.show()
     
     resultats = {
-        "est_escalier": True,  # Toujours considérer qu'il y a un escalier
+        "est_escalier": True,
         "masque_escalier": masque_escalier,
         "image_classification": image_classification
     }
@@ -349,24 +339,18 @@ def detection_escaliers_complete(image_path, visualiser=False):
     
     # Déterminer directement le type d'escalier ici au lieu d'utiliser le post-traitement
     if "lignes_horizontales" in caracteristiques and len(caracteristiques["lignes_horizontales"]) >= 3:
-        # NOUVELLE APPROCHE: Ne considérer que les lignes principales (les plus longues)
         lignes_h = caracteristiques["lignes_horizontales"]
         
-        # 1. Calculer la longueur de chaque ligne
         lignes_avec_longueur = []
         for ligne in lignes_h:
             x1, y1, x2, y2 = ligne[0]
             longueur = np.sqrt((x2-x1)**2 + (y2-y1)**2)
             lignes_avec_longueur.append((ligne, longueur))
         
-        # 2. Trier les lignes par longueur décroissante
         lignes_avec_longueur.sort(key=lambda x: x[1], reverse=True)
         
-        # 3. Ne garder que les N lignes les plus longues (représentant mieux la structure)
-        n_lignes_principales = min(len(lignes_avec_longueur), 10)  # Considérer max 10 lignes principales
+        n_lignes_principales = min(len(lignes_avec_longueur), 10)
         lignes_principales = lignes_avec_longueur[:n_lignes_principales]
-        
-        # 4. Créer une image de visualisation des lignes principales si demandé
         if visualiser:
             img_lignes_principales = image_originale.copy()
             for ligne, _ in lignes_principales:
@@ -379,7 +363,7 @@ def detection_escaliers_complete(image_path, visualiser=False):
             plt.axis('off')
             plt.show()
         
-        # 5. Analyser la géométrie des lignes principales
+        # On analyse la géométrie des lignes principales
         angles = []
         longueurs = []
         centres_x = []
@@ -393,20 +377,18 @@ def detection_escaliers_complete(image_path, visualiser=False):
             longueurs.append(longueur)
             centres_x.append(centre_x)
         
-        # 6. Calculer les métriques de classification
-        ecart_type_angles = np.std(angles)  # Parallélisme des lignes
-        ecart_type_centres = np.std(centres_x)  # Alignement vertical
+        # On calcule les métriques de classification
+        ecart_type_angles = np.std(angles)
+        ecart_type_centres = np.std(centres_x)
         longueur_moyenne = np.mean(longueurs)
         variation_centres = ecart_type_centres / longueur_moyenne if longueur_moyenne > 0 else float('inf')
         
-        # 7. Afficher les métriques si visualisation activée
         print(f"Métriques des lignes principales:")
         print(f"- Nombre de lignes principales: {n_lignes_principales}")
         print(f"- Écart-type des angles: {ecart_type_angles:.2f}°")
         print(f"- Variation des centres X: {variation_centres:.2f}")
         print(f"- Angles des lignes principales: {[round(a, 1) for a in angles]}")
         
-        # 8. Classifier selon les métriques des lignes principales
         if ecart_type_angles < 10.0 and variation_centres < 0.3:
             resultats["type_escalier"] = "droit"
             print("Critères d'escalier droit satisfaits!")
@@ -414,7 +396,6 @@ def detection_escaliers_complete(image_path, visualiser=False):
             resultats["type_escalier"] = "tournant"
             print("Critères d'escalier tournant satisfaits!")
             
-        # 9. Sauvegarder les métriques dans les résultats pour analyse
         resultats["metriques"] = {
             "ecart_type_angles": ecart_type_angles,
             "variation_centres": variation_centres,
@@ -422,9 +403,9 @@ def detection_escaliers_complete(image_path, visualiser=False):
             "longueurs": longueurs
         }
     else:
-        resultats["type_escalier"] = "tournant"  # Par défaut
+        resultats["type_escalier"] = "tournant"
     
-    # Dessiner le type d'escalier sur l'image de classification
+    # On dessine le type d'escalier sur l'image de classification
     image_resultat = resultats["image_classification"].copy()
     masque = resultats["masque_escalier"]
     
@@ -446,7 +427,6 @@ def detection_escaliers_complete(image_path, visualiser=False):
     
     resultats["image_classification"] = image_resultat
     
-    # Sauvegarde des résultats
     cv2.imwrite("resultats_classification_finale.jpg", resultats["image_classification"])
     cv2.imwrite("masque_escalier_final.jpg", resultats["masque_escalier"])
     
@@ -459,7 +439,7 @@ if __name__ == "__main__":
     image_path = "images/14.jpg"
     
     try:
-        # Exécuter le pipeline complet
+        # Exécuter tout le processus
         resultats = detection_escaliers_complete(image_path, visualiser=True)
     except Exception as e:
         print(f"Erreur lors de la détection: {e}")

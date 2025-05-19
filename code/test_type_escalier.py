@@ -20,22 +20,19 @@ def tester_type_escalier(image_path, visualiser=True):
     """
     print(f"\nTest de détection sur: {image_path}")
     
-    # Charger l'image
     image = cv2.imread(image_path)
     if image is None:
         print(f"Erreur: Impossible de charger l'image {image_path}")
         return None
     
     try:
-        # Exécuter la détection complète
+        # On execute toute les étapes de détéction d'escalier
         resultats = detection_escaliers_complete(image_path, visualiser=visualiser)
         
         # Afficher le résultat
         if resultats and "type_escalier" in resultats:
             type_escalier = resultats["type_escalier"]
             print(f"\n=== RÉSULTAT: ESCALIER {type_escalier.upper()} ===\n")
-            
-            # Afficher l'image avec l'annotation
             plt.figure(figsize=(10, 8))
             plt.imshow(cv2.cvtColor(resultats["image_classification"], cv2.COLOR_BGR2RGB))
             plt.title(f"Escalier détecté: {type_escalier.upper()}")
@@ -65,10 +62,7 @@ def tester_images_labelisees(dossier_images, visualiser=False):
     Returns:
         dict: Statistiques de performance
     """
-    # Importer le module d'évaluation
     from evaluer_performances import evaluer_performances
-    
-    # Exécuter l'évaluation
     resultats = evaluer_performances(dossier_images, visualiser)
     
     return resultats
@@ -89,7 +83,7 @@ def analyser_resultats_detailles(resultats_df_path):
         df = pd.read_csv(resultats_df_path)
         print(f"Fichier chargé avec {len(df)} entrées")
         
-        # Calculer les statistiques de base
+        # On calcule les statistiques
         total = len(df)
         corrects = df['correct'].sum()
         incorrects = total - corrects
@@ -130,9 +124,8 @@ def analyser_resultats_detailles(resultats_df_path):
 
 if __name__ == "__main__":
     # Chemin vers une image d'escalier à tester
-    image_path = "images/14.jpg"  # Remplacez par votre image d'escalier
+    image_path = "images/14.jpg" 
     
-    # Test sur une image spécifique
     tester_type_escalier(image_path, visualiser=True)
     
     # Optionnel: Test sur plusieurs images (décommentez pour utiliser)

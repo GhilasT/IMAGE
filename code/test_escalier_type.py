@@ -13,7 +13,7 @@ def tester_classification_type(dossier_images="images/", visualiser=True):
         dossier_images (str): Chemin vers le dossier contenant les images
         visualiser (bool): Si True, affiche les résultats pour chaque image
     """
-    # Récupérer tous les fichiers images du dossier
+    # On recupère toutes les images du dossier
     extensions = ["*.jpg", "*.jpeg", "*.png"]
     fichiers_images = []
     
@@ -22,13 +22,11 @@ def tester_classification_type(dossier_images="images/", visualiser=True):
     
     print(f"Nombre d'images trouvées: {len(fichiers_images)}")
     resultats = []
-    
-    # Traiter chaque image
-    for i, image_path in enumerate(fichiers_images):
+
+    for i, image_path in enumerate(fichiers_images): # Pour chaque image
         try:
             print(f"\nTraitement de l'image {i+1}/{len(fichiers_images)}: {image_path}")
             
-            # Exécuter le pipeline complet
             resultat = detection_escaliers_complete(image_path, visualiser=visualiser)
             
             if resultat and resultat["est_escalier"]:
@@ -48,7 +46,7 @@ def tester_classification_type(dossier_images="images/", visualiser=True):
             import traceback
             traceback.print_exc()
     
-    # Afficher un récapitulatif
+    # On affiche un récapitulatifs
     if resultats:
         print("\n=== Récapitulatif des résultats ===")
         print(f"Total d'escaliers détectés: {len(resultats)}")

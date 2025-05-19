@@ -20,21 +20,20 @@ def extraction_lignes_simples(image_contours, visualiser=False):
     # Créer une image en couleur pour l'affichage des résultats
     image_resultats = cv2.cvtColor(image_contours, cv2.COLOR_GRAY2BGR) if len(image_contours.shape) == 2 else image_contours.copy()
     
-    # 1. Appliquer la transformée de Hough probabiliste pour détecter les lignes
+    # On applique la trasformée de Hough pour détécler les lignes
     lignes = cv2.HoughLinesP(
-        image_contours,       # Image binaire des contours
-        rho=1,                # Résolution en pixels
-        theta=np.pi/180,      # Résolution angulaire en radians
-        threshold=50,         # Seuil de l'accumulateur
-        minLineLength=50,     # Longueur minimale des lignes
-        maxLineGap=10         # Écart maximal entre segments
+        image_contours,      
+        rho=1,              
+        theta=np.pi/180,     
+        threshold=50,        
+        minLineLength=50,    
+        maxLineGap=10       
     )
     
     if lignes is None:
         print("Aucune ligne détectée!")
         return None
     
-    # 2. Filtrer les lignes selon leur orientation
     lignes_horizontales = []
     lignes_verticales = []
     
@@ -45,24 +44,23 @@ def extraction_lignes_simples(image_contours, visualiser=False):
     for ligne in lignes:
         x1, y1, x2, y2 = ligne[0]
         
-        # Calculer l'angle de la ligne par rapport à l'horizontale
-        if x2 - x1 == 0:  # Éviter division par zéro
+        # On calcule l'angle de la ligne
+        if x2 - x1 == 0:
             angle = 90
         else:
             angle = abs(math.degrees(math.atan2(y2 - y1, x2 - x1)))
         
-        # Filtrer selon l'orientation
-        if angle < 30 or angle > 150:  # Lignes horizontales (±30° de tolérance)
+        if angle < 30 or angle > 150:  # On applique une tolérance de 30 degré
             lignes_horizontales.append(ligne)
-            cv2.line(image_resultats, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Vert
+            cv2.line(image_resultats, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.line(image_horizontales, (x1, y1), (x2, y2), (0, 255, 0), 2)
             
-        elif 60 < angle < 120:  # Lignes verticales (±30° de tolérance)
+        elif 60 < angle < 120:
             lignes_verticales.append(ligne)
-            cv2.line(image_resultats, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Rouge
+            cv2.line(image_resultats, (x1, y1), (x2, y2), (0, 0, 255), 2)
             cv2.line(image_verticales, (x1, y1), (x2, y2), (0, 0, 255), 2)
     
-    # Visualisation des résultats
+    # Visualisation des résultats si le flag visualiser est a True
     if visualiser:
         plt.figure(figsize=(15, 10))
         
@@ -128,7 +126,7 @@ def detection_escaliers_simplifiee(image_path, visualiser=False):
         print(f"Lignes horizontales détectées: {len(resultats['lignes_horizontales'])}")
         print(f"Lignes verticales détectées: {len(resultats['lignes_verticales'])}")
         
-        # Sauvegarder les images résultantes
+        # Sauvegarder les images finales
         cv2.imwrite("lignes_filtrees.jpg", resultats['image_resultats'])
         cv2.imwrite("lignes_horizontales.jpg", resultats['image_horizontales'])
         cv2.imwrite("lignes_verticales.jpg", resultats['image_verticales'])
@@ -137,11 +135,10 @@ def detection_escaliers_simplifiee(image_path, visualiser=False):
     return resultats
 
 if __name__ == "__main__":
-    # Chemin vers une image d'escalier (à remplacer par votre propre chemin)
     image_path = "../images/4.jpg"
     
     try:
-        # Exécuter le pipeline simplifié
+        # On execute tout le processus de traitement
         resultats = detection_escaliers_simplifiee(image_path, visualiser=True)
     except Exception as e:
         print(f"Erreur lors de l'extraction des lignes: {e}")

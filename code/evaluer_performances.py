@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from extraction_caracteristiques import detection_escaliers_complete
-from tqdm import tqdm  # Pour afficher une barre de progression
+from tqdm import tqdm
 
 def charger_label_json(chemin_json):
     """
@@ -29,7 +29,6 @@ def charger_label_json(chemin_json):
             return None, None
             
         # Convertir le chemin en absolu, en tenant compte du format "../images/nom.jpg"
-        # Pour un chemin comme "../images/nom.jpg", on utilise le dossier parent du parent du JSON
         dossier_json = os.path.dirname(chemin_json)
         
         # Si le chemin d'image commence par "../", on remonte d'un niveau supplémentaire
@@ -104,7 +103,7 @@ def afficher_matrice_confusion(cm, classes, titre='Matrice de confusion'):
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black")
     
-    # Ajouter les étiquettes TP, TN, FP, FN pour une matrice 2x2
+    # On etiquette les valeurs
     # Considérer la première classe (Droit) comme la classe positive
     if len(classes) == 2:
         plt.text(0, 0, f"TP: {cm[0, 0]}", ha='center', va='center', 
@@ -137,27 +136,24 @@ def evaluer_performances(dossier_labels="../Labelised_stairs_direction/", visual
         visualiser (bool): Si True, affiche des exemples de détection
     
     Returns:
-        dict: Résultats de l'évaluation
+        dict: Résultat de l'évaluation
     """
     print(f"Évaluation des performances en utilisant les données dans: {dossier_labels}")
     
-    # Vérifier que le dossier existe
     if not os.path.exists(dossier_labels):
         raise FileNotFoundError(f"Le dossier {dossier_labels} n'existe pas")
     
-    # Trouver tous les fichiers JSON
+    # Recupération de tous les fichiers json
     fichiers_json = [f for f in os.listdir(dossier_labels) if f.endswith('.json')]
     print(f"Nombre de fichiers JSON trouvés: {len(fichiers_json)}")
     
     # Collecter les labels et les prédictions
     resultats = []
     
-    # Parcourir chaque fichier JSON
+    # On parcours tout les fichiers JSON
     for json_file in tqdm(fichiers_json, desc="Traitement des images"):
-        # Chemin complet du JSON
         chemin_json = os.path.join(dossier_labels, json_file)
         
-        # Extraire le label réel et le chemin de l'image
         label_reel, chemin_image = charger_label_json(chemin_json)
         
         if label_reel is None:
@@ -185,8 +181,8 @@ def evaluer_performances(dossier_labels="../Labelised_stairs_direction/", visual
                     "resultat_complet": resultat_detection
                 })
                 
-                # Afficher quelques exemples de détection si demandé
-                if visualiser and len(resultats) % 5 == 0:  # Afficher 1 exemple sur 5
+                # Afficher quelques exemples de détection si flag visualiser en vrai
+                if visualiser and len(resultats) % 5 == 0:
                     plt.figure(figsize=(10, 8))
                     plt.imshow(cv2.cvtColor(resultat_detection["image_classification"], cv2.COLOR_BGR2RGB))
                     plt.title(f"Réel: {label_reel.upper()} - Prédit: {prediction.upper()}")
@@ -216,7 +212,7 @@ def evaluer_performances(dossier_labels="../Labelised_stairs_direction/", visual
         afficher_matrice_confusion(cm, ['Droit', 'Tournant'], 
                                titre='Matrice de confusion - Détection du type d\'escalier')
         
-        # Extraire les valeurs pour les métriques
+        # Extraire les valeurs pour les métriques afin de calculer les évaluations
         # - TP = escalier droit correctement prédit droit (cm[0,0])
         # - TN = escalier tournant correctement prédit tournant (cm[1,1])
         # - FP = escalier tournant incorrectement prédit droit (cm[1,0])

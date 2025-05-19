@@ -11,15 +11,13 @@ def amplifier_contours_verticaux(image, facteur_amplification=2.0):
         facteur_amplification (float): Facteur par lequel amplifier les contours verticaux
         
     Returns:
-        numpy.ndarray: Image avec les contours verticaux amplifiés
+        numpy.ndarray: Image avec les contours verticaux amplifiés.
     """
-    # Appliquer un filtre de Sobel vertical pour extraire les contours verticaux
+    # Appliquer un filtre de Sobel pour faire ressortir les contours verticaux
     gradient_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
     # Conversion en valeur absolue et normalisation
     gradient_y_abs = cv2.convertScaleAbs(gradient_y)
-    
-    # Appliquer un filtre morphologique pour renforcer les structures verticales
-    kernel_vertical = np.ones((5, 1), np.uint8)  # Noyau vertical
+    kernel_vertical = np.ones((5, 1), np.uint8) 
     contours_verticaux = cv2.morphologyEx(gradient_y_abs, cv2.MORPH_CLOSE, kernel_vertical)
     
     # Amplifier les contours verticaux dans l'image originale
@@ -38,41 +36,35 @@ def detection_contours(image_pretraitee, visualiser=False):
     Returns:
         contours (numpy.ndarray): Image des contours détectés avec emphase sur les verticaux
     """
-    # 1 & 2. Calcul des gradients avec Sobel
     # Gradient horizontal (dérivée selon x)
     gradient_x = cv2.Sobel(image_pretraitee, cv2.CV_64F, 1, 0, ksize=3)
-    # Gradient vertical (dérivée selon y) - utilisé pour les contours horizontaux
+    # Gradient vertical (dérivée selon y)
     gradient_y = cv2.Sobel(image_pretraitee, cv2.CV_64F, 0, 1, ksize=3)
     
-    # Donner plus de poids au gradient y pour accentuer les contours horizontaux
-    # (qui correspondent aux marches d'escalier horizontales)
-    poids_x = 1.0  # Poids normal pour les contours verticaux
-    poids_y = 2.5  # Poids plus élevé pour les contours horizontaux (qui détectent les marches)
+    # Donner plus de poids au gradient y pour accentuer les contours horizontaux, ca correspond aux marches sur l'image
+    poids_x = 1.0 
+    poids_y = 2.5
     
-    # Magnitude du gradient pondérée
     magnitude = np.sqrt((poids_x * gradient_x)**2 + (poids_y * gradient_y)**2)
     magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
     
-    # Direction du gradient
     direction = np.arctan2(gradient_y, gradient_x)
     
     # Amplifier spécifiquement les contours verticaux
     magnitude_amplifiee = amplifier_contours_verticaux(magnitude, facteur_amplification=1.8)
     
     # Calcul des contours avec l'implémentation optimisée de Canny d'OpenCV
-    # Nous utilisons des seuils adaptés à une image déjà seuillée
-    seuil_bas = 30  # Ces valeurs peuvent être ajustées
+    # On défini un seuillage arbitraire
+    seuil_bas = 30
     seuil_haut = 100
     contours_opencv = cv2.Canny(magnitude_amplifiee.astype(np.uint8), seuil_bas, seuil_haut)
     
-    # Renforcement morphologique des contours verticaux
-    kernel_vertical = np.ones((7, 1), np.uint8)  # Noyau vertical plus grand
+    kernel_vertical = np.ones((7, 1), np.uint8)
+    # On ampliphie les contours horizontaux et verticaux
     contours_verticaux = cv2.morphologyEx(contours_opencv, cv2.MORPH_CLOSE, kernel_vertical)
-    
-    # Combiner les contours originaux et les contours verticaux renforcés
     contours_finaux = cv2.addWeighted(contours_opencv, 0.7, contours_verticaux, 0.3, 0)
     
-    # Visualisation des étapes si demandé
+    # Si le flag est activé, on affiche les étapes
     if visualiser:
         plt.figure(figsize=(15, 10))
         
@@ -114,22 +106,18 @@ def detection_contours(image_pretraitee, visualiser=False):
 def test_detection_contours():
     """Fonction de test pour la détection des contours"""
     try:
-        # Utiliser le module de prétraitement existant
         from pretraitement import pretraitement_image
         
-        # Chemin vers une image d'escalier (à remplacer par votre propre chemin)
+        # Path vers une image
         image_path = "images/4.jpg"
-        
-        # Prétraitement de l'image
+        # Chaine de traitement...
         print("Application du prétraitement...")
         image_pretraitee = pretraitement_image(image_path, visualiser=False)
         print("Prétraitement réussi!")
-        # Appliquer la détection des contours avec visualisation
         print("Détection des contours...")
         contours = detection_contours(image_pretraitee, visualiser=True)
         print("Détection des contours réussie!")
         
-        # Sauvegarde de l'image des contours
         cv2.imwrite("contours_detectes.jpg", contours)
         print("Image des contours sauvegardée sous 'contours_detectes.jpg'")
         

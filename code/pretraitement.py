@@ -18,22 +18,18 @@ def pretraitement_image(image_path, visualiser=False):
     Returns:
         image_traitee (numpy.ndarray): Image prétraitée
     """
-    # Chargement de l'image
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Impossible de charger l'image: {image_path}")
-    
-    # 1. Conversion en niveaux de gris
+
+    # On applique tout le pre traitement
     image_gris = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # 2. Application d'un filtre gaussien
-    # Le kernel size (5,5) et sigma=0 sont des valeurs standard, à ajuster selon besoin
-    image_lissee = cv2.GaussianBlur(image_gris, (5, 5), 0)
+    image_lissee = cv2.GaussianBlur(image_gris, (5, 5), 0) # Flou Gaussien
     
-    # 3. Égalisation d'histogramme
-    image_egalisee = cv2.equalizeHist(image_lissee)
+    image_egalisee = cv2.equalizeHist(image_lissee) # On egalise l'histogramme
     
-    # On ne fait plus le seuillage d'Otsu pour améliorer la détection des contours
+    # Ici on n'applique pas Otsu
     image_traitee = image_egalisee
     
     # Visualisation des étapes si demandé
@@ -63,7 +59,6 @@ def pretraitement_image(image_path, visualiser=False):
         plt.tight_layout()
         plt.show()
         
-        # Afficher également les histogrammes
         plt.figure(figsize=(15, 5))
         
         plt.subplot(1, 2, 1)
@@ -83,7 +78,6 @@ def pretraitement_image(image_path, visualiser=False):
 
 def test_pretraitement():
     """Fonction de test pour le prétraitement"""
-    # Chemin vers une image d'escalier
     image_path = "../images/14.jpg"
     
     try:
