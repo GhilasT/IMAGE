@@ -10,13 +10,29 @@ def couleur_features(roi):
     lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     feats = []
+
     for img in (lab, hsv):
         for c in cv2.split(img):
             c_flat = c.reshape(-1)
-            feats += [c_flat.mean(), c_flat.std(), skew(c_flat)]
+            c_flat = c_flat[c_flat > 0]          # ignorer les zéros
+            if c_flat.size == 0:                 # masque vide
+                feats += [0., 0., 0.]
+                continue
+            mean = c_flat.mean()
+            std  = c_flat.std()
+            skewness = 0.0 if std < 1e-6 else skew(c_flat, bias=False)
+            feats += [mean, std, skewness]
+
     hist = cv2.calcHist([hsv], [0,1,2], None, [8,8,8],
                         [0,180, 0,256, 0,256]).flatten()
-    return np.hstack([feats, hist / roi.size])
+
+    n_pix = np.count_nonzero(hsv[:, :, 0])      # ← nb de pixels « réels »
+    if n_pix == 0:
+        hist_norm = np.zeros_like(hist, dtype=np.float32)  # ROI vide
+    else:
+        hist_norm = hist / n_pix
+
+    return np.hstack([feats, hist_norm])
 
 # ---------- 2. Texture ----------------------------
 def texture_features(gray):
