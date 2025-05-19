@@ -8,17 +8,17 @@ import numpy as np
 from skimage.feature import local_binary_pattern
 
 #  Règles et constantes (faciles à ajuster mais arbitraires)
-METAL_STD_MAX = 5.0           # Écart‑type max. du canal V pour considérer un métal "lisse" pcq value c'est la luminosité, on assume que 
+METAL_STD_MAX = 10           # Écart‑type max. du canal V pour considérer un métal "lisse" pcq value c'est la luminosité, on assume que 
                                 # que ça reflete plus de lumiere 
-METAL_UR_MAX  = 0.15          # Ratio de motif LBP uniforme (flat) max. pour un métal
+METAL_UR_MAX  = 0.25          # Ratio de motif LBP uniforme (flat) max. pour un métal
 # LBP = Local Binary Pattern Pour chaque pixel on regarde un petit voisinage circulaire  on compare chaque voisin à la valeur du pixel central :
 # si le voisin ≥ centre → 1 ; sinon → 0. On lit les 0/1 dans l’ordre horaire pour obtenir un mot binaire de 8 bits. 
 # puis on convertit ce mot en entier : 00000000₂ = 0, 00011100₂ = 28, etc. L’image de ces entiers est la carte LBP.
 #pourquoi ? on résume la texture d’une région en faisant simplement l’histogramme des valeurs LBP
 #source :  https://fr.wikipedia.org/wiki/Motif_binaire_local 
-WOOD_H_MIN, WOOD_H_MAX = 10, 25   # Hue moyen caractéristique du bois (brun)
-CONCR_H_LOW_MAX   = 10        # seuil bas de Hue pour béton gris/bleuté là c plus les couleurs qui nous intéressent
-CONCR_H_HIGH_MIN  = 140       # et seuil haut de Hue pour béton gris/jaunâtre
+WOOD_H_MIN, WOOD_H_MAX = 5, 35   # Hue moyen caractéristique du bois (brun)
+CONCR_H_LOW_MAX   = 25       # seuil bas de Hue pour béton gris/bleuté là c plus les couleurs qui nous intéressent
+CONCR_H_HIGH_MIN  = 135      # et seuil haut de Hue pour béton gris/jaunâtre
 
 
 #  Lecture de l'image et extraction éventuelle de notre zone d'intéret (dans notre cas les marches) depuis un JSON LabelMe
@@ -87,19 +87,18 @@ def classify_material(roi_bgr: np.ndarray) -> str:
 
     H, Vstd, ur = compute_features(roi_bgr)
 
-    # métal très lisse / brillant
-    if Vstd < METAL_STD_MAX and ur < METAL_UR_MAX:
+    if Vstd < METAL_STD_MAX and ur < METAL_UR_MAX: #metal -> brillant donc on considère qu’un métal “lisse” 
+        #a une faible variation de luminance dans sa surface
         return "métal"
 
-    # bois brun
-    if WOOD_H_MIN <= H <= WOOD_H_MAX:
-        return "bois"
-
-    # béton gris (Hue très bas ou très haut)
     if H < CONCR_H_LOW_MAX or H > CONCR_H_HIGH_MIN:
         return "béton"
 
+    if WOOD_H_MIN <= H <= WOOD_H_MAX and ur > 0.15:
+        return "bois"
+
     return "inconnu"
+
 
 
 #  interface ligne de commande 
